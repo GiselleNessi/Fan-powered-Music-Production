@@ -506,7 +506,7 @@ export default function Home() {
                     </svg>
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">Connect Your Wallet</h3>
-                  <p className="text-gray-300 mb-4">You need to connect your wallet to create a campaign and claim your NFT</p>
+                  <p className="text-gray-300 mb-4">You need to connect your wallet to create a campaign and mint your NFT</p>
                   <ConnectButton
                     client={client}
                     chain={baseSepolia}
@@ -569,10 +569,10 @@ export default function Home() {
                   {creating ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Claiming NFT...
+                      Creating Campaign...
                     </>
                   ) : account ? (
-                    "Create Campaign & Claim NFT"
+                    "Create Campaign"
                   ) : (
                     "Connect Wallet to Continue"
                   )}

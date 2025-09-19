@@ -83,7 +83,7 @@ export function useCampaigns() {
         return newCampaign;
       }
 
-      // Contract interaction - claim campaign NFT from ERC1155 Drop
+      // Contract interaction - mint campaign NFT from ERC1155 Drop
       console.log("Creating campaign on contract:", campaignData);
       console.log("🔍 Environment check:", {
         contractAddress: process.env.NEXT_PUBLIC_CAMPAIGN_CONTRACT_ADDRESS,
@@ -102,9 +102,11 @@ export function useCampaigns() {
         address: account.address
       });
       
-      // Claim campaign NFT from ERC1155 Drop contract (exact same as working script)
-      console.log("🎯 Creating claimTo transaction...");
+      // Mint campaign NFT from ERC1155 Drop contract (exact same as working script)
+      console.log("🎯 Creating mintTo transaction...");
       
+      // Note: claimTo is the Thirdweb function name for ERC1155 Drop contracts
+      // It mints/creates the NFT to the user's wallet
       const transaction = claimTo({
         contract,
         to: account.address,
@@ -120,13 +122,13 @@ export function useCampaigns() {
         account 
       });
       
-      console.log("✅ Campaign NFT claimed successfully!");
-      console.log("🎵 User claimed campaign NFT from ERC1155 Drop contract!");
-      console.log("📋 Claim result:", result);
+      console.log("✅ Campaign created successfully!");
+      console.log("🎵 Campaign NFT minted from ERC1155 Drop contract!");
+      console.log("📋 Mint result:", result);
 
       // Handle both regular transactions and AA UserOps
       let transactionHash = null;
-      let successMessage = "Campaign NFT claimed successfully!";
+      let successMessage = "Campaign created successfully!";
       
       // Log the full result to see what properties are available
       console.log("🔍 Full result object:", JSON.stringify(result, null, 2));
@@ -158,7 +160,7 @@ export function useCampaigns() {
       if (transactionHash) {
         setSuccess(successMessage);
       } else {
-        setSuccess("Campaign NFT claimed successfully! (Transaction details not available)");
+        setSuccess("Campaign created successfully! (Transaction details not available)");
       }
 
       // Create campaign object
