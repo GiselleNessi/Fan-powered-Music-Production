@@ -1,4 +1,4 @@
-// Core types for the FanVest platform
+// Core types for the Artist Tipping platform
 
 export interface Artist {
   id: string;

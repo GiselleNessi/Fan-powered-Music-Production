@@ -1,4 +1,4 @@
-# Artist Campaign Platform
+# Artist Tipping Platform
 
 A Next.js application that allows artists to create campaigns for their tracks and receive Base ETH tips directly from fans. **Built on Base and powered by thirdweb** for Web3 functionality.
 

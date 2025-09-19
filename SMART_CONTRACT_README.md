@@ -1,6 +1,6 @@
 # Smart Contract Implementation
 
-This document explains the smart contract implementation for the Artist Campaign Platform.
+This document explains the smart contract implementation for the Artist Tipping Platform.
 
 ## Overview
 
