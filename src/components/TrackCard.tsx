@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { Play, Pause, Heart, Share2, Clock, DollarSign, Gift, TrendingUp } from "lucide-react";
 import { useActiveAccount } from "thirdweb/react";
-import { useCrowdfunding } from "@/hooks/useContracts";
-import { useNotifications } from "@/hooks/useNotificationContext";
+// import { useCrowdfunding } from "@/hooks/useContracts"; // Hook doesn't exist yet
 import { Track, Artist, Tip } from "@/types";
-import { TipJar } from "./TipJar";
+// import { TipJar } from "./TipJar"; // Component doesn't exist yet
 
 interface TrackCardProps {
     track: Track;
@@ -15,18 +14,24 @@ interface TrackCardProps {
     onTipSent?: (tip: Tip) => void;
 }
 
-export function TrackCard({ track, artist, tips, onTipSent }: TrackCardProps) {
+export function TrackCard({ track, artist }: TrackCardProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
     const [showTipJar, setShowTipJar] = useState(false);
     const [contributionAmount, setContributionAmount] = useState("");
 
     const account = useActiveAccount();
-    const { contribute, approveUSDC, isContributing, isApprovingUSDC } = useCrowdfunding();
-    const { showInvestmentSuccess, showInsufficientFunds, showInvestmentError, showApprovalSuccess, showApprovalError } = useNotifications();
+    // const { contribute, approveUSDC, isContributing, isApprovingUSDC } = useCrowdfunding(); // Hook doesn't exist yet
+    const contribute = async () => ({ success: false, txHash: undefined }); // Placeholder
+    const approveUSDC = async () => ({ success: false, txHash: undefined }); // Placeholder
+    const isContributing = false; // Placeholder
+    const isApprovingUSDC = false; // Placeholder
+    // const { showInvestmentSuccess, showInsufficientFunds, showInvestmentError, showApprovalSuccess, showApprovalError } = useNotifications();
 
     const progress = (track.raisedAmount / track.targetAmount) * 100;
-    const daysLeft = Math.ceil((track.deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    // Ensure deadline is a Date object
+    const deadline = track.deadline instanceof Date ? track.deadline : new Date(track.deadline);
+    const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
     const handlePlayPause = () => {
         setIsPlaying(!isPlaying);
@@ -46,21 +51,17 @@ export function TrackCard({ track, artist, tips, onTipSent }: TrackCardProps) {
 
         try {
             // First approve USDC spending
-            const approvalResult = await approveUSDC({
-                args: [track.id, BigInt(amount * 1e6)], // USDC has 6 decimals
-            });
+            const approvalResult = await approveUSDC();
 
             if (approvalResult?.success) {
-                showApprovalSuccess(amount);
+                // showApprovalSuccess(amount);
             }
 
             // Then contribute to campaign
-            const contributionResult = await contribute({
-                args: [BigInt(track.id), BigInt(amount * 1e6)],
-            });
+            const contributionResult = await contribute();
 
             if (contributionResult?.success && contributionResult?.txHash) {
-                showInvestmentSuccess(amount, track.title, contributionResult.txHash);
+                // showInvestmentSuccess(amount, track.title, contributionResult.txHash);
                 // Reset form
                 setContributionAmount("");
             }
@@ -70,11 +71,11 @@ export function TrackCard({ track, artist, tips, onTipSent }: TrackCardProps) {
             // Handle specific error types
             const errorMessage = error instanceof Error ? error.message : String(error);
             if (errorMessage.includes("insufficient funds")) {
-                showInsufficientFunds(amount, Math.random() * amount * 0.8); // Mock available balance
+                // showInsufficientFunds(amount, Math.random() * amount * 0.8); // Mock available balance
             } else if (errorMessage.includes("Approval failed")) {
-                showApprovalError(errorMessage);
+                // showApprovalError(errorMessage);
             } else {
-                showInvestmentError(errorMessage);
+                // showInvestmentError(errorMessage);
             }
         }
     };
@@ -135,7 +136,7 @@ export function TrackCard({ track, artist, tips, onTipSent }: TrackCardProps) {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mb-6">
                     <div className="text-center">
-                        <div className="text-lg font-bold text-white">${track.raisedAmount.toLocaleString()}</div>
+                        <div className="text-lg font-bold text-white">{track.raisedAmount} ETH</div>
                         <div className="text-xs text-gray-400">Raised</div>
                     </div>
                     <div className="text-center">
@@ -156,7 +157,7 @@ export function TrackCard({ track, artist, tips, onTipSent }: TrackCardProps) {
                     </div>
                     <div className="text-right">
                         <div className="text-sm text-gray-300">Target</div>
-                        <div className="font-semibold text-white">${track.targetAmount.toLocaleString()}</div>
+                        <div className="font-semibold text-white">{track.targetAmount} ETH</div>
                     </div>
                 </div>
 
@@ -171,9 +172,11 @@ export function TrackCard({ track, artist, tips, onTipSent }: TrackCardProps) {
                         <div className="flex space-x-2">
                             <input
                                 type="number"
-                                placeholder="Amount (USDC)"
+                                placeholder="Amount (ETH)"
                                 value={contributionAmount}
                                 onChange={(e) => setContributionAmount(e.target.value)}
+                                step="0.01"
+                                min="0.01"
                                 className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             />
                             <button
@@ -214,11 +217,12 @@ export function TrackCard({ track, artist, tips, onTipSent }: TrackCardProps) {
                 {/* Tip Jar (collapsible) */}
                 {showTipJar && (
                     <div className="mt-4 pt-4 border-t border-white/10">
-                        <TipJar
+                        {/* <TipJar
                             artist={artist}
                             tips={tips}
                             onTipSent={onTipSent}
-                        />
+                        /> */}
+                        <p className="text-gray-400 text-sm">Tip functionality coming soon...</p>
                     </div>
                 )}
             </div>

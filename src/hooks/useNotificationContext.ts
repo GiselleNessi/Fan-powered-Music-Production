@@ -1,7 +1,13 @@
 "use client";
 
-import { useNotificationContext } from "@/components/NotificationProvider";
-
+// Placeholder notification functions until NotificationProvider is implemented
 export function useNotifications() {
-  return useNotificationContext();
+  return {
+    showInvestmentSuccess: () => {},
+    showInsufficientFunds: () => {},
+    showInvestmentError: () => {},
+    showApprovalSuccess: () => {},
+    showApprovalError: () => {},
+  };
 }
+

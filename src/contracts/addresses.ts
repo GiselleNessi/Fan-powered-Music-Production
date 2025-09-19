@@ -1,5 +1,5 @@
 import { ContractAddresses } from "@/types";
-import { CURRENT_NETWORK } from "@/config/networks";
+import { CURRENT_NETWORK, USDC_CONTRACT_ADDRESS } from "@/config/networks";
 
 // Contract addresses - these will be set when contracts are deployed
 export const CONTRACT_ADDRESSES: ContractAddresses = {
@@ -11,7 +11,7 @@ export const CONTRACT_ADDRESSES: ContractAddresses = {
 };
 
 // USDC address for current network
-export const USDC_ADDRESS = CURRENT_NETWORK.usdcAddress;
+export const USDC_ADDRESS = USDC_CONTRACT_ADDRESS.BASE_SEPOLIA;
 
 // Chain configuration
 export const CHAIN_ID = CURRENT_NETWORK.chainId;

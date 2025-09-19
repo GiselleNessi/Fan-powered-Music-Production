@@ -104,3 +104,4 @@ export interface CampaignStats {
   completedCampaigns: number;
   averageContribution: number;
 }
+

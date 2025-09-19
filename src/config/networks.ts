@@ -6,7 +6,6 @@ export const NETWORKS = {
     name: "Base Sepolia",
     rpcUrl: "https://sepolia.base.org",
     explorerUrl: "https://sepolia.basescan.org",
-    usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     isTestnet: true,
   },
   BASE_MAINNET: {
@@ -14,13 +13,18 @@ export const NETWORKS = {
     name: "Base",
     rpcUrl: "https://mainnet.base.org",
     explorerUrl: "https://basescan.org",
-    usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     isTestnet: false,
   },
 } as const;
 
-// Current network configuration
+// Use Base Sepolia for testing
 export const CURRENT_NETWORK = NETWORKS.BASE_SEPOLIA;
+
+// USDC Contract Addresses
+export const USDC_CONTRACT_ADDRESS = {
+  BASE_SEPOLIA: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia USDC
+  BASE_MAINNET: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Base Mainnet USDC
+} as const;
 
 // Helper function to get network info
 export function getNetworkInfo(chainId: number) {
@@ -32,3 +36,4 @@ export function isTestnet(chainId?: number) {
   const network = chainId ? getNetworkInfo(chainId) : CURRENT_NETWORK;
   return network.isTestnet;
 }
+

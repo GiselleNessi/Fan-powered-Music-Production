@@ -105,36 +105,10 @@ export function FanPortfolio({ portfolio, perkTiers }: FanPortfolioProps) {
                     {/* Recent Activity */}
                     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
                         <h3 className="text-xl font-semibold text-white mb-4">Recent Activity</h3>
-                        <div className="space-y-4">
-                            {[
-                                { type: "tip", amount: 25, artist: "Luna Star", time: "2 hours ago" },
-                                { type: "investment", amount: 100, track: "Midnight Dreams", time: "1 day ago" },
-                                { type: "royalty", amount: 15, track: "Acoustic Soul", time: "3 days ago" },
-                            ].map((activity, index) => (
-                                <div key={index} className="flex items-center justify-between py-3 border-b border-white/10 last:border-b-0">
-                                    <div className="flex items-center space-x-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activity.type === "tip" ? "bg-green-500/20" :
-                                            activity.type === "investment" ? "bg-purple-500/20" :
-                                                "bg-yellow-500/20"
-                                            }`}>
-                                            {activity.type === "tip" ? <Gift className="h-4 w-4 text-green-400" /> :
-                                                activity.type === "investment" ? <TrendingUp className="h-4 w-4 text-purple-400" /> :
-                                                    <DollarSign className="h-4 w-4 text-yellow-400" />}
-                                        </div>
-                                        <div>
-                                            <p className="text-white">
-                                                {activity.type === "tip" ? `Tipped ${activity.artist}` :
-                                                    activity.type === "investment" ? `Invested in ${activity.track}` :
-                                                        `Earned royalties from ${activity.track}`}
-                                            </p>
-                                            <p className="text-gray-400 text-sm">{activity.time}</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-purple-300 font-semibold">${activity.amount}</p>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="text-center py-8">
+                            <Gift className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                            <h4 className="text-lg font-semibold text-gray-400 mb-2">No activity yet</h4>
+                            <p className="text-gray-500">Start supporting artists to see your activity here!</p>
                         </div>
                     </div>
                 </div>
@@ -184,7 +158,7 @@ export function FanPortfolio({ portfolio, perkTiers }: FanPortfolioProps) {
                     <h3 className="text-xl font-semibold text-white">Your Perk Tiers</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {perkTiers.map((tier, index) => {
+                        {perkTiers.map((tier) => {
                             const tierInfo = getCurrentTier("artist-1"); // This would be dynamic
                             const isUnlocked = tierInfo?.current?.name === tier.name;
                             const isNextTier = tierInfo?.next?.name === tier.name;

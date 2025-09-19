@@ -1,270 +1,231 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, Music, DollarSign, Calendar, Percent, Image as ImageIcon } from "lucide-react";
+import { isValidAddress, isValidSongUrl, getPlatformName } from "@/lib/utils";
+import { Copy, ExternalLink, Music, Wallet } from "lucide-react";
 
-export default function CreateCampaign() {
-    const [formData, setFormData] = useState({
-        title: "",
-        description: "",
-        targetAmount: "",
-        deadline: "",
-        royaltyShare: "15",
-        audioFile: null as File | null,
-        imageFile: null as File | null,
-    });
+export default function CreatePage() {
+    const [songUrl, setSongUrl] = useState("");
+    const [artistWallet, setArtistWallet] = useState("");
+    const [generatedLink, setGeneratedLink] = useState("");
+    const [copied, setCopied] = useState(false);
+    const [errors, setErrors] = useState<{ songUrl?: string; artistWallet?: string }>({});
 
-    const [isUploading, setIsUploading] = useState(false);
+    const validateInputs = () => {
+        const newErrors: { songUrl?: string; artistWallet?: string } = {};
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        if (!songUrl.trim()) {
+            newErrors.songUrl = "Song URL is required";
+        } else if (!isValidSongUrl(songUrl)) {
+            newErrors.songUrl = "Please enter a valid music platform URL (Spotify, YouTube, SoundCloud, etc.)";
+        }
+
+        if (!artistWallet.trim()) {
+            newErrors.artistWallet = "Artist wallet address is required";
+        } else if (!isValidAddress(artistWallet)) {
+            newErrors.artistWallet = "Please enter a valid Ethereum address";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'image') => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setFormData(prev => ({
-                ...prev,
-                [type === 'audio' ? 'audioFile' : 'imageFile']: file
-            }));
+    const generateLink = () => {
+        if (!validateInputs()) return;
+
+        const encodedSong = encodeURIComponent(songUrl.trim());
+        const link = `${window.location.origin}/tip?song=${encodedSong}&to=${artistWallet.trim()}`;
+        setGeneratedLink(link);
+    };
+
+    const copyToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(generatedLink);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error("Failed to copy:", err);
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsUploading(true);
-
-        // TODO: Implement actual form submission with contract interaction
-        console.log("Creating campaign:", formData);
-
-        // Simulate upload
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsUploading(false);
-
-        // TODO: Redirect to campaign page or show success message
+    const checkEnvironment = () => {
+        const missingVars = [];
+        if (!process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID) missingVars.push("NEXT_PUBLIC_THIRDWEB_CLIENT_ID");
+        return missingVars;
     };
 
+    const missingEnvVars = checkEnvironment();
+
+    if (missingEnvVars.length > 0) {
+        return (
+            <div className="max-w-2xl mx-auto">
+                <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-red-400 mb-4">Missing Environment Variables</h2>
+                    <p className="text-gray-300 mb-4">
+                        The following environment variables are required to run this application:
+                    </p>
+                    <ul className="list-disc list-inside text-gray-300 space-y-2">
+                        {missingEnvVars.map((varName) => (
+                            <li key={varName} className="font-mono text-sm">{varName}</li>
+                        ))}
+                    </ul>
+                    <p className="text-gray-300 mt-4">
+                        Please check your .env.local file and ensure all required variables are set.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-4xl font-bold text-white mb-2">Create New Campaign</h1>
-                <p className="text-gray-300">Share your work-in-progress track and let fans invest in your success</p>
+        <div className="max-w-2xl mx-auto space-y-8">
+            {/* Header */}
+            <div className="text-center">
+                <h1 className="text-4xl font-bold text-white mb-4">Create Tip Link</h1>
+                <p className="text-gray-300 text-lg">
+                    Share your music and wallet address to receive tips from fans
+                </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Track Information */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                    <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-                        <Music className="h-5 w-5 mr-2" />
-                        Track Information
-                    </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Track Title *
-                            </label>
-                            <input
-                                type="text"
-                                name="title"
-                                value={formData.title}
-                                onChange={handleInputChange}
-                                required
-                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="Enter your track title"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Artist Name *
-                            </label>
-                            <input
-                                type="text"
-                                name="artist"
-                                value="Your Artist Name" // This would come from user profile
-                                disabled
-                                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-gray-400 cursor-not-allowed"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="mt-6">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Description *
+            {/* Form */}
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/20">
+                <div className="space-y-6">
+                    {/* Song URL Input */}
+                    <div>
+                        <label htmlFor="songUrl" className="block text-sm font-medium text-white mb-2">
+                            <Music className="inline w-4 h-4 mr-2" />
+                            Song URL
                         </label>
-                        <textarea
-                            name="description"
-                            value={formData.description}
-                            onChange={handleInputChange}
-                            required
-                            rows={4}
-                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="Describe your track, inspiration, and what makes it special..."
+                        <input
+                            id="songUrl"
+                            type="url"
+                            value={songUrl}
+                            onChange={(e) => setSongUrl(e.target.value)}
+                            placeholder="https://open.spotify.com/track/..."
+                            className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
-                    </div>
-                </div>
-
-                {/* Media Upload */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                    <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-                        <Upload className="h-5 w-5 mr-2" />
-                        Media Upload
-                    </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Audio Upload */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Audio File *
-                            </label>
-                            <div className="border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
-                                <Music className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <input
-                                    type="file"
-                                    accept="audio/*"
-                                    onChange={(e) => handleFileChange(e, 'audio')}
-                                    className="hidden"
-                                    id="audio-upload"
-                                />
-                                <label
-                                    htmlFor="audio-upload"
-                                    className="cursor-pointer block"
-                                >
-                                    <p className="text-white font-medium mb-2">
-                                        {formData.audioFile ? formData.audioFile.name : "Click to upload audio"}
-                                    </p>
-                                    <p className="text-gray-400 text-sm">MP3, WAV, or M4A files</p>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Image Upload */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Cover Image
-                            </label>
-                            <div className="border-2 border-dashed border-white/20 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
-                                <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => handleFileChange(e, 'image')}
-                                    className="hidden"
-                                    id="image-upload"
-                                />
-                                <label
-                                    htmlFor="image-upload"
-                                    className="cursor-pointer block"
-                                >
-                                    <p className="text-white font-medium mb-2">
-                                        {formData.imageFile ? formData.imageFile.name : "Click to upload image"}
-                                    </p>
-                                    <p className="text-gray-400 text-sm">JPG, PNG, or GIF files</p>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Campaign Settings */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                    <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-                        <DollarSign className="h-5 w-5 mr-2" />
-                        Campaign Settings
-                    </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Target Amount (USDC) *
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    name="targetAmount"
-                                    value={formData.targetAmount}
-                                    onChange={handleInputChange}
-                                    required
-                                    min="100"
-                                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="5000"
-                                />
-                                <span className="absolute right-3 top-3 text-gray-400">USDC</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Deadline *
-                            </label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                                <input
-                                    type="date"
-                                    name="deadline"
-                                    value={formData.deadline}
-                                    onChange={handleInputChange}
-                                    required
-                                    min={new Date().toISOString().split('T')[0]}
-                                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Royalty Share (%) *
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    name="royaltyShare"
-                                    value={formData.royaltyShare}
-                                    onChange={handleInputChange}
-                                    required
-                                    min="1"
-                                    max="50"
-                                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    placeholder="15"
-                                />
-                                <Percent className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
-                            </div>
-                            <p className="text-xs text-gray-400 mt-1">
-                                Percentage of streaming royalties to share with contributors
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex justify-end space-x-4">
-                    <button
-                        type="button"
-                        className="px-6 py-3 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-colors"
-                    >
-                        Save as Draft
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={isUploading}
-                        className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white rounded-lg font-semibold transition-colors flex items-center space-x-2"
-                    >
-                        {isUploading ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                <span>Creating Campaign...</span>
-                            </>
-                        ) : (
-                            <span>Create Campaign</span>
+                        {errors.songUrl && (
+                            <p className="mt-2 text-sm text-red-400">{errors.songUrl}</p>
                         )}
+                        {songUrl && isValidSongUrl(songUrl) && (
+                            <p className="mt-2 text-sm text-green-400">
+                                ✓ {getPlatformName(songUrl)} link detected
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Artist Wallet Input */}
+                    <div>
+                        <label htmlFor="artistWallet" className="block text-sm font-medium text-white mb-2">
+                            <Wallet className="inline w-4 h-4 mr-2" />
+                            Artist Wallet Address
+                        </label>
+                        <input
+                            id="artistWallet"
+                            type="text"
+                            value={artistWallet}
+                            onChange={(e) => setArtistWallet(e.target.value)}
+                            placeholder="0x..."
+                            className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                        />
+                        {errors.artistWallet && (
+                            <p className="mt-2 text-sm text-red-400">{errors.artistWallet}</p>
+                        )}
+                        {artistWallet && isValidAddress(artistWallet) && (
+                            <p className="mt-2 text-sm text-green-400">
+                                ✓ Valid Ethereum address
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Generate Button */}
+                    <button
+                        onClick={generateLink}
+                        disabled={!songUrl.trim() || !artistWallet.trim()}
+                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                    >
+                        Generate Tip Link
                     </button>
                 </div>
-            </form>
+            </div>
+
+            {/* Generated Link */}
+            {generatedLink && (
+                <div className="bg-green-900/20 border border-green-500/50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-green-400 mb-4">Your Tip Link is Ready!</h3>
+
+                    {/* Preview */}
+                    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-400 mb-1">Track Link</p>
+                                <a
+                                    href={songUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:text-blue-300 flex items-center gap-2 truncate"
+                                >
+                                    <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                                    {getPlatformName(songUrl)} - {songUrl}
+                                </a>
+                            </div>
+                        </div>
+                        <div className="mt-3">
+                            <p className="text-sm text-gray-400 mb-1">Artist Wallet</p>
+                            <p className="text-white font-mono text-sm">{artistWallet}</p>
+                        </div>
+                    </div>
+
+                    {/* Shareable Link */}
+                    <div className="space-y-3">
+                        <label className="block text-sm font-medium text-white">
+                            Shareable Tip Link
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={generatedLink}
+                                readOnly
+                                className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm font-mono"
+                            />
+                            <button
+                                onClick={copyToClipboard}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex items-center gap-2"
+                            >
+                                <Copy className="w-4 h-4" />
+                                {copied ? "Copied!" : "Copy"}
+                            </button>
+                        </div>
+                    </div>
+
+                    <p className="text-sm text-gray-300 mt-4">
+                        Share this link with your fans. They can use it to send USDC tips directly to your wallet!
+                    </p>
+                </div>
+            )}
+
+            {/* Instructions */}
+            <div className="bg-gray-900/30 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">How it works</h3>
+                <div className="space-y-3 text-gray-300">
+                    <div className="flex items-start gap-3">
+                        <span className="bg-blue-600 text-white text-sm font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                        <p>Enter your song URL from any major music platform (Spotify, YouTube, SoundCloud, etc.)</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="bg-blue-600 text-white text-sm font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                        <p>Add your wallet address where you want to receive USDC tips</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="bg-blue-600 text-white text-sm font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                        <p>Generate and share the tip link with your fans</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <span className="bg-blue-600 text-white text-sm font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
+                        <p>Fans can send USDC tips directly to your wallet - no platform fees!</p>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
