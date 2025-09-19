@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { createThirdwebClient, defineChain } from "thirdweb";
 import { sendTransaction, prepareTransaction } from "thirdweb";
 import { shortenAddress, isValidAddress, formatETH, parseETH, getTransactionUrl, getPlatformName } from "@/lib/utils";
+import { useCampaigns } from "@/hooks/useCampaigns";
 import { Music, Users, Heart, Plus, Search, ExternalLink, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 // Create thirdweb client
@@ -37,13 +38,13 @@ type TransactionState = "idle" | "sending" | "success" | "error";
 
 export default function Home() {
   const account = useActiveAccount();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const { campaigns, loading, error, creating, success, createCampaign: createCampaignContract, updateRaisedAmount, clearMessages } = useCampaigns();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [tipAmount, setTipAmount] = useState("");
   const [txState, setTxState] = useState<TransactionState>("idle");
   const [txHash, setTxHash] = useState("");
-  const [error, setError] = useState("");
+  const [txError, setTxError] = useState("");
 
   // Create campaign form state
   const [newCampaign, setNewCampaign] = useState({
@@ -58,37 +59,9 @@ export default function Home() {
   // Quick amount buttons (in Base ETH)
   const quickAmounts = [0.001, 0.005, 0.01, 0.025];
 
-  // Load campaigns from localStorage
-  useEffect(() => {
-    const savedCampaigns = localStorage.getItem('campaigns');
-    if (savedCampaigns) {
-      const parsed = JSON.parse(savedCampaigns).map((c: Campaign & { createdAt: string }) => ({
-        ...c,
-        createdAt: new Date(c.createdAt)
-      }));
+  // Campaigns are now loaded from smart contract via useCampaigns hook
 
-      // Filter out any mock campaigns that might still be in localStorage
-      const filteredCampaigns = parsed.filter((campaign: Campaign) =>
-        !['mock-1', 'mock-2'].includes(campaign.id) &&
-        !['Midnight Dreams', 'Urban Pulse'].includes(campaign.title) &&
-        !['Luna Star', 'City Beats'].includes(campaign.artistName)
-      );
-
-      setCampaigns(filteredCampaigns);
-
-      // Update localStorage with filtered campaigns
-      if (filteredCampaigns.length !== parsed.length) {
-        localStorage.setItem('campaigns', JSON.stringify(filteredCampaigns));
-      }
-    }
-  }, []);
-
-  const saveCampaigns = (updatedCampaigns: Campaign[]) => {
-    setCampaigns(updatedCampaigns);
-    localStorage.setItem('campaigns', JSON.stringify(updatedCampaigns));
-  };
-
-  const createCampaign = () => {
+  const createCampaign = async () => {
     if (!newCampaign.title || !newCampaign.songUrl || !newCampaign.artistWallet || !newCampaign.artistName) {
       alert("Please fill in all required fields");
       return;
@@ -99,50 +72,54 @@ export default function Home() {
       return;
     }
 
-    const campaign: Campaign = {
-      id: Date.now().toString(),
-      title: newCampaign.title,
-      description: newCampaign.description,
-      songUrl: newCampaign.songUrl,
-      artistWallet: newCampaign.artistWallet,
-      artistName: newCampaign.artistName,
-      targetAmount: parseFloat(newCampaign.targetAmount) || 0,
-      raisedAmount: 0,
-      createdAt: new Date(),
-      isActive: true,
-    };
+    if (!account) {
+      alert("Please connect your wallet first to create a campaign");
+      return;
+    }
 
-    const updatedCampaigns = [campaign, ...campaigns];
-    saveCampaigns(updatedCampaigns);
+    try {
+      await createCampaignContract({
+        title: newCampaign.title,
+        description: newCampaign.description,
+        songUrl: newCampaign.songUrl,
+        artistWallet: newCampaign.artistWallet,
+        artistName: newCampaign.artistName,
+        targetAmount: parseFloat(newCampaign.targetAmount) || 0,
+        raisedAmount: 0,
+      });
 
-    // Reset form
-    setNewCampaign({
-      title: "",
-      description: "",
-      songUrl: "",
-      artistWallet: "",
-      artistName: "",
-      targetAmount: "",
-    });
-    setShowCreateForm(false);
+      // Reset form
+      setNewCampaign({
+        title: "",
+        description: "",
+        songUrl: "",
+        artistWallet: "",
+        artistName: "",
+        targetAmount: "",
+      });
+      setShowCreateForm(false);
+    } catch (error) {
+      console.error("Failed to create campaign:", error);
+      alert("Failed to create campaign. Please try again.");
+    }
   };
 
   const handleTip = async (campaign: Campaign) => {
 
     if (!tipAmount || parseFloat(tipAmount) <= 0) {
-      setError("Please enter a valid amount");
+      setTxError("Please enter a valid amount");
       return;
     }
 
     if (!account) {
-      setError("Please connect your wallet first");
+      setTxError("Please connect your wallet first");
       return;
     }
 
     // Note: In thirdweb v5, chain validation is handled by the ConnectButton
     // The account object doesn't contain chain information directly
 
-    setError("");
+    setTxError("");
     setTxState("sending");
 
     try {
@@ -181,17 +158,13 @@ export default function Home() {
       setTxHash(txHash);
       setTxState("success");
 
-      // Update campaign raised amount
-      const updatedCampaigns = campaigns.map(c =>
-        c.id === campaign.id
-          ? { ...c, raisedAmount: c.raisedAmount + parseFloat(tipAmount) }
-          : c
-      );
-      saveCampaigns(updatedCampaigns);
+      // Update campaign raised amount in smart contract
+      const newRaisedAmount = (parseFloat(campaign.raisedAmount.toString()) + parseFloat(tipAmount)).toString();
+      await updateRaisedAmount(campaign.id, newRaisedAmount);
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Transaction failed";
-      setError(errorMessage);
+      setTxError(errorMessage);
       setTxState("error");
     }
   };
@@ -216,7 +189,7 @@ export default function Home() {
             className="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            Create Campaign
+            {account ? "Create Campaign" : "Create Campaign (Connect Wallet)"}
           </button>
         </div>
       </div>
@@ -228,7 +201,12 @@ export default function Home() {
         </div>
 
         {/* Campaigns Grid */}
-        {campaigns.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-300">Loading campaigns...</p>
+          </div>
+        ) : campaigns.length === 0 ? (
           <div className="text-center py-12">
             <Music className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-400 mb-2">No campaigns yet</h3>
@@ -237,7 +215,7 @@ export default function Home() {
               onClick={() => setShowCreateForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              Create Your First Campaign
+              {account ? "Create Your First Campaign" : "Create Your First Campaign (Connect Wallet)"}
             </button>
           </div>
         ) : (
@@ -427,7 +405,10 @@ export default function Home() {
       {showCreateForm && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-          onClick={() => setShowCreateForm(false)}
+          onClick={() => {
+            setShowCreateForm(false);
+            clearMessages();
+          }}
         >
           <div
             className="bg-gray-900 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -436,7 +417,10 @@ export default function Home() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">Create New Campaign</h2>
               <button
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setShowCreateForm(false);
+                  clearMessages();
+                }}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <XCircle className="w-6 h-6" />
@@ -513,19 +497,96 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex gap-4 mt-6">
-              <button
-                onClick={createCampaign}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                Create Campaign
-              </button>
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
+            <div className="space-y-4 mt-6">
+              {!account ? (
+                <div className="text-center bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
+                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Connect Your Wallet</h3>
+                  <p className="text-gray-300 mb-4">You need to connect your wallet to create a campaign and claim your NFT</p>
+                  <ConnectButton
+                    client={client}
+                    chain={baseSepolia}
+                    theme="dark"
+                    connectModal={{ size: "compact" }}
+                    accountAbstraction={{
+                      chain: baseSepolia,
+                      sponsorGas: true,
+                    }}
+                  />
+                  <p className="text-xs text-gray-400 mt-3">
+                    🔒 Gasless transactions powered by Account Abstraction
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-green-300 font-medium">Wallet Connected</p>
+                      <p className="text-green-400 text-sm">{account.address.slice(0, 6)}...{account.address.slice(-4)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Success/Error Messages */}
+              {success && (
+                <div className="bg-green-900/50 border border-green-500 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <p className="text-green-300 text-sm">
+                      {success}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-900/50 border border-red-500 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <p className="text-red-300 text-sm">
+                      {error}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  onClick={createCampaign}
+                  disabled={!account || creating}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  {creating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Claiming NFT...
+                    </>
+                  ) : account ? (
+                    "Create Campaign & Claim NFT"
+                  ) : (
+                    "Connect Wallet to Continue"
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    clearMessages();
+                  }}
+                  className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -608,6 +669,10 @@ export default function Home() {
                     chain={baseSepolia}
                     theme="dark"
                     connectModal={{ size: "compact" }}
+                    accountAbstraction={{
+                      chain: baseSepolia,
+                      sponsorGas: true,
+                    }}
                   />
                 </div>
 
@@ -662,11 +727,11 @@ export default function Home() {
               <div className="text-center">
                 <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
                 <h4 className="text-lg font-semibold text-red-400 mb-2">Transaction Failed</h4>
-                <p className="text-gray-300 mb-4">{error}</p>
+                <p className="text-gray-300 mb-4">{txError}</p>
                 <button
                   onClick={() => {
                     setTxState("idle");
-                    setError("");
+                    setTxError("");
                   }}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                 >

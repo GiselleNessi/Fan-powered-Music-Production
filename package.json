@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:campaign": "node scripts/test-campaign-creation.js",
+    "test:campaign:api": "node scripts/test-campaign-rest-api.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.8",

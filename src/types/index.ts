@@ -97,6 +97,19 @@ export interface TipJarStats {
   }>;
 }
 
+export interface Campaign {
+  id: string;
+  title: string;
+  description: string;
+  songUrl: string;
+  artistWallet: string;
+  artistName: string;
+  targetAmount: number;
+  raisedAmount: number;
+  createdAt: Date;
+  isActive: boolean;
+}
+
 export interface CampaignStats {
   totalCampaigns: number;
   totalRaised: number;

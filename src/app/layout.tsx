@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 
 export const metadata: Metadata = {
-  title: "Artist Tipping",
-  description: "Simple tipping platform for artists - send USDC tips directly to your favorite artists",
+  title: "Artist Campaign Platform",
+  description: "Support artists directly with Base ETH tips - Built on Base and powered by thirdweb",
 };
 
 export default function RootLayout({

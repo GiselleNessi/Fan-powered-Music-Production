@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { createThirdwebClient, defineChain } from "thirdweb";
-import { getContract } from "thirdweb";
-import { prepareContractCall, sendTransaction } from "thirdweb";
-import { shortenAddress, isValidAddress, formatUSDC, parseUSDC, getTransactionUrl, getPlatformName } from "@/lib/utils";
-import { USDC_CONTRACT_ADDRESS, CURRENT_NETWORK } from "@/config/networks";
+import { sendTransaction, prepareTransaction } from "thirdweb";
+import { shortenAddress, isValidAddress, formatETH, parseETH, getTransactionUrl, getPlatformName } from "@/lib/utils";
+import { useCampaigns } from "@/hooks/useCampaigns";
 import { Music, Plus, ExternalLink, CheckCircle, XCircle, Loader2, Heart } from "lucide-react";
 
 // Create thirdweb client
@@ -39,7 +38,7 @@ type TransactionState = "idle" | "sending" | "success" | "error";
 
 export default function CampaignsPage() {
     const account = useActiveAccount();
-    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const { campaigns, loading, createCampaign: createCampaignContract, updateRaisedAmount } = useCampaigns();
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
     const [tipAmount, setTipAmount] = useState("");
@@ -57,40 +56,12 @@ export default function CampaignsPage() {
         targetAmount: "",
     });
 
-    // Quick amount buttons
-    const quickAmounts = [1, 5, 10, 25];
+    // Quick amount buttons (in Base ETH)
+    const quickAmounts = [0.001, 0.005, 0.01, 0.025];
 
-    // Load campaigns from localStorage
-    useEffect(() => {
-        const savedCampaigns = localStorage.getItem('campaigns');
-        if (savedCampaigns) {
-            const parsed = JSON.parse(savedCampaigns).map((c: Campaign & { createdAt: string }) => ({
-                ...c,
-                createdAt: new Date(c.createdAt)
-            }));
+    // Campaigns are now loaded from smart contract via useCampaigns hook
 
-            // Filter out any mock campaigns that might still be in localStorage
-            const filteredCampaigns = parsed.filter((campaign: Campaign) =>
-                !['mock-1', 'mock-2'].includes(campaign.id) &&
-                !['Midnight Dreams', 'Urban Pulse'].includes(campaign.title) &&
-                !['Luna Star', 'City Beats'].includes(campaign.artistName)
-            );
-
-            setCampaigns(filteredCampaigns);
-
-            // Update localStorage with filtered campaigns
-            if (filteredCampaigns.length !== parsed.length) {
-                localStorage.setItem('campaigns', JSON.stringify(filteredCampaigns));
-            }
-        }
-    }, []);
-
-    const saveCampaigns = (updatedCampaigns: Campaign[]) => {
-        setCampaigns(updatedCampaigns);
-        localStorage.setItem('campaigns', JSON.stringify(updatedCampaigns));
-    };
-
-    const createCampaign = () => {
+    const createCampaign = async () => {
         if (!newCampaign.title || !newCampaign.songUrl || !newCampaign.artistWallet || !newCampaign.artistName) {
             alert("Please fill in all required fields");
             return;
@@ -101,32 +72,36 @@ export default function CampaignsPage() {
             return;
         }
 
-        const campaign: Campaign = {
-            id: Date.now().toString(),
-            title: newCampaign.title,
-            description: newCampaign.description,
-            songUrl: newCampaign.songUrl,
-            artistWallet: newCampaign.artistWallet,
-            artistName: newCampaign.artistName,
-            targetAmount: parseFloat(newCampaign.targetAmount) || 0,
-            raisedAmount: 0,
-            createdAt: new Date(),
-            isActive: true,
-        };
+        if (!account) {
+            alert("Please connect your wallet first to create a campaign");
+            return;
+        }
 
-        const updatedCampaigns = [campaign, ...campaigns];
-        saveCampaigns(updatedCampaigns);
+        try {
+            await createCampaignContract({
+                title: newCampaign.title,
+                description: newCampaign.description,
+                songUrl: newCampaign.songUrl,
+                artistWallet: newCampaign.artistWallet,
+                artistName: newCampaign.artistName,
+                targetAmount: parseFloat(newCampaign.targetAmount) || 0,
+                raisedAmount: 0,
+            });
 
-        // Reset form
-        setNewCampaign({
-            title: "",
-            description: "",
-            songUrl: "",
-            artistWallet: "",
-            artistName: "",
-            targetAmount: "",
-        });
-        setShowCreateForm(false);
+            // Reset form
+            setNewCampaign({
+                title: "",
+                description: "",
+                songUrl: "",
+                artistWallet: "",
+                artistName: "",
+                targetAmount: "",
+            });
+            setShowCreateForm(false);
+        } catch (error) {
+            console.error("Failed to create campaign:", error);
+            alert("Failed to create campaign. Please try again.");
+        }
     };
 
     const handleTip = async (campaign: Campaign) => {
@@ -144,39 +119,29 @@ export default function CampaignsPage() {
         setTxState("sending");
 
         try {
-            // Get the USDC contract
-            const contract = getContract({
+            // Parse the amount to wei (Base ETH has 18 decimals)
+            const amountWei = parseETH(tipAmount);
+
+            // For native Base ETH transfers, we need to send ETH directly without contract data
+            const transaction = prepareTransaction({
                 client,
                 chain: baseSepolia,
-                address: USDC_CONTRACT_ADDRESS.BASE_SEPOLIA,
+                to: campaign.artistWallet as `0x${string}`,
+                value: amountWei,
+                data: "0x" as `0x${string}`,
             });
 
-            // Parse the amount to wei (USDC has 6 decimals)
-            const amountWei = parseUSDC(tipAmount);
-
-            // Prepare the transfer transaction
-            const transaction = prepareContractCall({
-                contract,
-                method: "function transfer(address to, uint256 amount) returns (bool)",
-                params: [campaign.artistWallet, amountWei],
-            });
-
-            // Send the transaction
             const result = await sendTransaction({
-                transaction,
                 account,
+                transaction,
             });
 
             setTxHash(result.transactionHash);
             setTxState("success");
 
-            // Update campaign raised amount
-            const updatedCampaigns = campaigns.map(c =>
-                c.id === campaign.id
-                    ? { ...c, raisedAmount: c.raisedAmount + parseFloat(tipAmount) }
-                    : c
-            );
-            saveCampaigns(updatedCampaigns);
+            // Update campaign raised amount in smart contract
+            const newRaisedAmount = (parseFloat(campaign.raisedAmount.toString()) + parseFloat(tipAmount)).toString();
+            await updateRaisedAmount(campaign.id, newRaisedAmount);
 
         } catch (err: unknown) {
             console.error("Transaction failed:", err);
@@ -295,32 +260,51 @@ export default function CampaignsPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-white mb-2">Target Amount (USDC)</label>
+                                <label className="block text-sm font-medium text-white mb-2">Target Amount (Base ETH)</label>
                                 <input
                                     type="number"
-                                    step="0.01"
+                                    step="0.001"
                                     min="0"
                                     value={newCampaign.targetAmount}
                                     onChange={(e) => setNewCampaign({ ...newCampaign, targetAmount: e.target.value })}
-                                    placeholder="100"
+                                    placeholder="0.1"
                                     className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex gap-4 mt-6">
-                            <button
-                                onClick={createCampaign}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-                            >
-                                Create Campaign
-                            </button>
-                            <button
-                                onClick={() => setShowCreateForm(false)}
-                                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                            >
-                                Cancel
-                            </button>
+                        <div className="space-y-4 mt-6">
+                            {!account && (
+                                <div className="text-center">
+                                    <p className="text-gray-300 mb-3">Connect your wallet to create a campaign</p>
+                                    <ConnectButton
+                                        client={client}
+                                        chain={baseSepolia}
+                                        theme="dark"
+                                        connectModal={{ size: "compact" }}
+                                        accountAbstraction={{
+                                            chain: baseSepolia,
+                                            sponsorGas: true,
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={createCampaign}
+                                    disabled={!account}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                                >
+                                    {account ? "Create Campaign" : "Connect Wallet First"}
+                                </button>
+                                <button
+                                    onClick={() => setShowCreateForm(false)}
+                                    className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -356,14 +340,14 @@ export default function CampaignsPage() {
                         {txState === "idle" && (
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-white mb-2">Tip Amount (USDC)</label>
+                                    <label className="block text-sm font-medium text-white mb-2">Tip Amount (Base ETH)</label>
                                     <input
                                         type="number"
-                                        step="0.01"
+                                        step="0.001"
                                         min="0"
                                         value={tipAmount}
                                         onChange={(e) => setTipAmount(e.target.value)}
-                                        placeholder="0.00"
+                                        placeholder="0.001"
                                         className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
@@ -377,7 +361,7 @@ export default function CampaignsPage() {
                                                 onClick={() => setTipAmount(amount.toString())}
                                                 className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
                                             >
-                                                {amount}
+                                                {amount} Base ETH
                                             </button>
                                         ))}
                                     </div>
@@ -389,6 +373,10 @@ export default function CampaignsPage() {
                                         chain={baseSepolia}
                                         theme="dark"
                                         connectModal={{ size: "compact" }}
+                                        accountAbstraction={{
+                                            chain: baseSepolia,
+                                            sponsorGas: true,
+                                        }}
                                     />
                                 </div>
 
@@ -414,7 +402,7 @@ export default function CampaignsPage() {
                                 <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
                                 <h4 className="text-lg font-semibold text-green-400 mb-2">Tip Sent!</h4>
                                 <p className="text-gray-300 mb-4">
-                                    Your tip of {formatUSDC(parseFloat(tipAmount))} USDC has been sent to {selectedCampaign.artistName}.
+                                    Your tip of {formatETH(parseFloat(tipAmount))} Base ETH has been sent to {selectedCampaign.artistName}.
                                 </p>
                                 <a
                                     href={getTransactionUrl(txHash)}
@@ -469,7 +457,12 @@ export default function CampaignsPage() {
             )}
 
             {/* Campaigns Grid */}
-            {campaigns.length === 0 ? (
+            {loading ? (
+                <div className="text-center py-12">
+                    <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-300">Loading campaigns...</p>
+                </div>
+            ) : campaigns.length === 0 ? (
                 <div className="text-center py-12">
                     <Music className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-gray-400 mb-2">No campaigns yet</h3>
@@ -511,13 +504,13 @@ export default function CampaignsPage() {
                                 <div className="space-y-3">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-400">Raised</span>
-                                        <span className="text-white">{formatUSDC(campaign.raisedAmount)} USDC</span>
+                                        <span className="text-white">{formatETH(campaign.raisedAmount)} Base ETH</span>
                                     </div>
                                     {campaign.targetAmount > 0 && (
                                         <>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-gray-400">Target</span>
-                                                <span className="text-white">{formatUSDC(campaign.targetAmount)} USDC</span>
+                                                <span className="text-white">{formatETH(campaign.targetAmount)} Base ETH</span>
                                             </div>
                                             <div className="w-full bg-gray-700 rounded-full h-2">
                                                 <div
@@ -547,19 +540,11 @@ export default function CampaignsPage() {
                 </div>
             )}
 
-            {/* Network Info */}
+            {/* Built on Base */}
             <div className="bg-gray-900/30 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-400">
-                    Network: {CURRENT_NETWORK.name} {CURRENT_NETWORK.isTestnet && "(Testnet)"}
+                <p className="text-lg font-bold text-gray-300">
+                    Built on Base • Powered by thirdweb
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
-                    USDC Contract: {shortenAddress(USDC_CONTRACT_ADDRESS.BASE_SEPOLIA)}
-                </p>
-                {CURRENT_NETWORK.isTestnet && (
-                    <p className="text-xs text-blue-400 mt-2">
-                        🧪 Testing Mode: All donations go to 0x44eAD8980ea70901206dd72Ea452E2F336CE9452
-                    </p>
-                )}
             </div>
         </div>
     );
