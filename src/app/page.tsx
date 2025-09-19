@@ -669,10 +669,6 @@ export default function Home() {
                     chain={baseSepolia}
                     theme="dark"
                     connectModal={{ size: "compact" }}
-                    accountAbstraction={{
-                      chain: baseSepolia,
-                      sponsorGas: true,
-                    }}
                   />
                 </div>
 
