@@ -1,6 +1,6 @@
 # Artist Campaign Platform
 
-A simple Next.js application that allows artists to create campaigns for their tracks and receive Base ETH tips directly from fans. Built on Base and powered by thirdweb for Web3 functionality.
+A Next.js application that allows artists to create campaigns for their tracks and receive Base ETH tips directly from fans. **Built on Base and powered by thirdweb** for Web3 functionality.
 
 ## Features
 
@@ -13,7 +13,7 @@ A simple Next.js application that allows artists to create campaigns for their t
 ## Tech Stack
 
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS
-- **Web3**: thirdweb React SDK, Base blockchain
+- **Web3**: **thirdweb React SDK**, **Base blockchain**
 - **Token**: Native Base ETH transfers
 - **Styling**: Tailwind CSS with custom dark theme
 
@@ -164,39 +164,6 @@ src/
 - Touch-friendly interface
 - Optimized for mobile wallets
 
-## Development
-
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-
-### Code Style
-
-- TypeScript for type safety
-- ESLint for code quality
-- Tailwind CSS for styling
-- Component-based architecture
-
-## Deployment
-
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy
-
-### Other Platforms
-
-The app can be deployed to any platform that supports Next.js:
-- Netlify
-- Railway
-- DigitalOcean App Platform
-- AWS Amplify
-
 ## Security Considerations
 
 - All transactions are client-side and transparent
@@ -204,41 +171,13 @@ The app can be deployed to any platform that supports Next.js:
 - Users maintain full control of their wallets
 - Smart contract interactions are read-only except for transfers
 
-## Troubleshooting
-
-### Common Issues
-
-1. **"Missing Environment Variables" error**:
-   - Ensure all required environment variables are set in `.env.local`
-   - Restart the development server after adding variables
-
-2. **Wallet connection issues**:
-   - Make sure you're on the correct network (Base Mainnet/Sepolia)
-   - Try refreshing the page and reconnecting your wallet
-
-3. **Transaction failures**:
-   - Ensure you have sufficient Base ETH for gas fees and tips
-   - Check that you have enough Base ETH balance
-   - Verify the recipient address is correct
-
-4. **Network mismatch**:
-   - The app will show which network it's configured for
-   - Switch your wallet to the correct network
-
-### Getting Help
-
-- Check the browser console for error messages
-- Verify your environment variables are correct
-- Ensure you're using a supported wallet
-- Test on Base Sepolia first before using mainnet
-
 ## License
 
 MIT License - feel free to use this code for your own projects.
 
 ## Built on Base • Powered by thirdweb
 
-This application is built on the Base blockchain and powered by thirdweb's Web3 infrastructure:
+This application is built on the **Base blockchain** and powered by **thirdweb's Web3 infrastructure**:
 
 - **Base**: A secure, low-cost, developer-friendly Ethereum L2 built by Coinbase
 - **thirdweb**: Complete Web3 development framework with React components, SDKs, and infrastructure
@@ -248,7 +187,3 @@ This application is built on the Base blockchain and powered by thirdweb's Web3 
 - **Base**: Fast, cheap transactions with Ethereum security
 - **thirdweb**: Simplified Web3 development with pre-built components
 - **Perfect Match**: Base's performance + thirdweb's developer experience
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
