@@ -296,7 +296,7 @@ export default function CampaignsPage() {
                                     disabled={!account}
                                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                                 >
-                                    {account ? "Create Campaign" : "Connect Wallet First"}
+                                    {account ? "Create Campaign" : "Sign In First"}
                                 </button>
                                 <button
                                     onClick={() => setShowCreateForm(false)}

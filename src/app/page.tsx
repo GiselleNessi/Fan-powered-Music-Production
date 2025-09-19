@@ -189,7 +189,7 @@ export default function Home() {
             className="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            {account ? "Create Campaign" : "Create Campaign (Connect Wallet)"}
+            {account ? "Create Campaign" : "Create Campaign (Sign In)"}
           </button>
         </div>
       </div>
@@ -215,7 +215,7 @@ export default function Home() {
               onClick={() => setShowCreateForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              {account ? "Create Your First Campaign" : "Create Your First Campaign (Connect Wallet)"}
+              {account ? "Create Your First Campaign" : "Create Your First Campaign (Sign In)"}
             </button>
           </div>
         ) : (
@@ -505,8 +505,8 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Connect Your Wallet</h3>
-                  <p className="text-gray-300 mb-4">You need to connect your wallet to create a campaign and mint your NFT</p>
+                  <h3 className="text-lg font-semibold text-white mb-2">Sign In to Create Campaign</h3>
+                  <p className="text-gray-300 mb-4">Sign in with your wallet to create a campaign and get your NFT</p>
                   <ConnectButton
                     client={client}
                     chain={baseSepolia}
@@ -518,7 +518,7 @@ export default function Home() {
                     }}
                   />
                   <p className="text-xs text-gray-400 mt-3">
-                    🔒 Gasless transactions powered by Account Abstraction
+                    🔒 Free transactions - no gas fees required
                   </p>
                 </div>
               ) : (
@@ -530,7 +530,7 @@ export default function Home() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-green-300 font-medium">Wallet Connected</p>
+                      <p className="text-green-300 font-medium">Signed In</p>
                       <p className="text-green-400 text-sm">{account.address.slice(0, 6)}...{account.address.slice(-4)}</p>
                     </div>
                   </div>
@@ -574,7 +574,7 @@ export default function Home() {
                   ) : account ? (
                     "Create Campaign"
                   ) : (
-                    "Connect Wallet to Continue"
+                    "Sign In to Continue"
                   )}
                 </button>
                 <button
